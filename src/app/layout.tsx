@@ -1,8 +1,12 @@
 import "~/styles/globals.css";
 
-import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
+import { Onest } from "next/font/google";
 
+import { ProfileBadge } from "~/components/component/ProfileBadge";
+import { Sidebar } from "~/components/component/Sidebar";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { getServerAuthSession } from "~/server/auth";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -11,13 +15,39 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-export default function RootLayout({
+const font = Onest({
+  subsets: ["latin"],
+});
+
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const session = await getServerAuthSession();
+
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
+    <html lang="en" className={font.className}>
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <main className="grid h-screen grid-cols-[300px_auto_300px] lg:mx-[0] xl:mx-[120px]">
+            <div className="h-full border-r-2 border-r-border p-6">
+              <Sidebar />
+            </div>
+            <ScrollArea>
+              <div className="p-6">{children}</div>
+            </ScrollArea>
+            <div className="border-l-2 border-l-border p-6">
+              {session?.user.name ? (
+                <ProfileBadge
+                  name={session.user.name}
+                  username={session.user.name
+                    .toLocaleLowerCase()
+                    .replaceAll(" ", "_")}
+                  profilePicture={session.user.image!}
+                />
+              ) : null}
+            </div>
+          </main>
+        </TRPCReactProvider>
       </body>
     </html>
   );
