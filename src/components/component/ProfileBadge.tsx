@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import Link from "next/link";
 
 type ProfileBadgeProps = {
   name: string;
@@ -48,9 +49,11 @@ export const ProfileBadge = ({
           <User className="h-[1.15em] w-[1.15em]" />
           <p>Profile</p>
         </DropdownMenuItem>
-        <DropdownMenuItem className="space-x-2">
-          <LogOut className="h-[1.15em] w-[1.15em]" />
-          <p>Logout</p>
+        <DropdownMenuItem className="space-x-2" asChild>
+          <Link href="/api/auth/signout">
+            <LogOut className="h-[1.15em] w-[1.15em]" />
+            <p>Logout</p>
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -18,6 +18,7 @@ import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { TimePicker } from "~/components/ui/time-picker";
 import { useGeolocation } from "~/hooks/useGeolocation";
+import { useUploadThing } from "~/lib/uploadthing";
 import { cn } from "~/lib/utils";
 import { DayType } from "~/server/api/routers/post";
 import { days } from "~/server/db/schema";
@@ -29,6 +30,9 @@ export default function BusinessInput() {
     name: z.string().min(1),
     description: z.string().min(15).max(255),
     radius: z.coerce.number().min(1).max(1000), // meters
+    imageFile: z.any().refine((file) => file instanceof File, {
+      message: "A file must be uploaded",
+    }),
     businessHours: z.record(
       z.enum(days.enumValues),
       z.object({
@@ -42,21 +46,33 @@ export default function BusinessInput() {
   });
   const location = useGeolocation();
 
+  const { startUpload } = useUploadThing("imageUploader");
   const onSubmit: SubmitHandler<
     z.infer<typeof newBusinessFormSchema>
-  > = async ({ name, description, radius, businessHours }) => {
-    if (location.loaded && !location.error)
-      await newPostQuery.mutate({
-        name,
-        description,
-        type: "Business",
-        radius,
-        location: {
-          latitude: location.coordinates?.latitude!,
-          longitude: location.coordinates?.longitude!,
-        },
-        businessHours,
-      });
+  > = async ({ name, description, radius, imageFile, businessHours }) => {
+    if (!location.loaded || location.error) return;
+
+    let imageUrl = "";
+
+    if (imageFile) {
+      const uploadResponse = await startUpload([imageFile]);
+      if (uploadResponse && uploadResponse[0]) {
+        imageUrl = uploadResponse[0].url;
+      }
+    }
+
+    await newPostQuery.mutate({
+      name,
+      description,
+      type: "Business",
+      radius,
+      location: {
+        latitude: location.coordinates?.latitude!,
+        longitude: location.coordinates?.longitude!,
+      },
+      imageUrl,
+      businessHours,
+    });
   };
 
   const [checked, setChecked] = useState<{ [key in DayType]?: boolean }>(() => {
@@ -70,6 +86,23 @@ export default function BusinessInput() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="imageFile"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Image</FormLabel>
+              <FormControl>
+                <Input
+                  type="file"
+                  onChange={(e) => field.onChange(e.target.files?.[0] as File)}
+                  accept="image/*"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="name"

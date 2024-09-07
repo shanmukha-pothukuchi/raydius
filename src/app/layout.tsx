@@ -8,6 +8,9 @@ import { Sidebar } from "~/components/component/Sidebar";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { getServerAuthSession } from "~/server/auth";
 import { TRPCReactProvider } from "~/trpc/react";
+import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
+import { extractRouterConfig } from "uploadthing/server";
+import { imageFileRouter } from "./api/uploadthing/core";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -27,13 +30,14 @@ export default async function RootLayout({
   return (
     <html lang="en" className={font.className}>
       <body>
+        <NextSSRPlugin routerConfig={extractRouterConfig(imageFileRouter)} />
         <TRPCReactProvider>
           <main className="grid h-screen grid-cols-[300px_auto_300px] lg:mx-[0] xl:mx-[120px]">
             <div className="h-full border-r-2 border-r-border p-6">
               <Sidebar />
             </div>
             <ScrollArea>
-              <div className="p-6">{children}</div>
+              <div className="h-screen">{children}</div>
             </ScrollArea>
             <div className="border-l-2 border-l-border p-6">
               {session?.user.name ? (

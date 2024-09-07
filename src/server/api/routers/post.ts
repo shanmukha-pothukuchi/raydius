@@ -24,6 +24,7 @@ export const postRouter = createTRPCRouter({
           longitude: z.number(),
           latitude: z.number(),
         }),
+        imageUrl: z.string().optional(),
         type: zodPostType,
         radius: z.number().min(1).max(1000), // meters
         businessHours: z
@@ -50,6 +51,7 @@ export const postRouter = createTRPCRouter({
           .values({
             name: input.name,
             description: input.description,
+            imageUrl: input.imageUrl,
             type: input.type,
             radius: input.radius,
             location: {
@@ -88,7 +90,7 @@ export const postRouter = createTRPCRouter({
           longitude: z.number(),
           latitude: z.number(),
         }),
-        type: zodPostType,
+        type: z.enum(["All", ...postType.enumValues]),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -98,8 +100,8 @@ export const postRouter = createTRPCRouter({
         .from(posts)
         .where(
           and(
-            eq(posts.type, input.type),
-            sql`ST_DWithin(${userLocation}, ${posts.location}, ${posts.radius})`,
+            input.type == "All" ? sql`TRUE` : eq(posts.type, input.type),
+            sql`ST_DWithin(${userLocation}, ${posts.location}, ${posts.radius}, TRUE)`,
           ),
         );
     }),
@@ -113,6 +115,13 @@ export const postRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return await ctx.db.query.posts.findFirst({
         where: eq(posts.id, input.postId),
+        with: {
+          user: true,
+          connections: true,
+          ratings: true,
+          businessHours: true,
+          openTime: true,
+        },
       });
     }),
 });

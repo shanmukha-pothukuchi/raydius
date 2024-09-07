@@ -16,6 +16,7 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { DateTimePicker } from "~/components/ui/time-picker";
 import { useGeolocation } from "~/hooks/useGeolocation";
+import { useUploadThing } from "~/lib/uploadthing";
 import { api } from "~/trpc/react";
 
 export default function EventInput() {
@@ -24,6 +25,9 @@ export default function EventInput() {
     name: z.string().min(1),
     description: z.string().min(15).max(255),
     radius: z.coerce.number().min(1).max(1000), // meters
+    imageFile: z.any().refine((file) => file instanceof File, {
+      message: "A file must be uploaded",
+    }),
     startTime: z.date(),
     endTime: z.date(),
   });
@@ -32,33 +36,63 @@ export default function EventInput() {
   });
   const location = useGeolocation();
 
+  const { startUpload } = useUploadThing("imageUploader");
   const onSubmit: SubmitHandler<z.infer<typeof newEventFormSchema>> = async ({
     name,
     description,
     radius,
+    imageFile,
     startTime,
     endTime,
   }) => {
-    if (location.loaded && !location.error)
-      await newPostQuery.mutate({
-        name,
-        description,
-        type: "Event",
-        radius,
-        location: {
-          longitude: location.coordinates?.longitude!,
-          latitude: location.coordinates?.latitude!,
-        },
-        openTime: {
-          start: startTime,
-          end: endTime,
-        },
-      });
+    if (!location.loaded || location.error) return;
+
+    let imageUrl = "";
+
+    if (imageFile) {
+      const uploadResponse = await startUpload([imageFile]);
+      if (uploadResponse && uploadResponse[0]) {
+        imageUrl = uploadResponse[0].url;
+      }
+    }
+
+    await newPostQuery.mutate({
+      name,
+      description,
+      type: "Event",
+      radius,
+      location: {
+        longitude: location.coordinates?.longitude!,
+        latitude: location.coordinates?.latitude!,
+      },
+      imageUrl,
+      openTime: {
+        start: startTime,
+        end: endTime,
+      },
+    });
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="imageFile"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Image</FormLabel>
+              <FormControl>
+                <Input
+                  type="file"
+                  onChange={(e) => field.onChange(e.target.files?.[0] as File)} // Set file input
+                  accept="image/*"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="name"

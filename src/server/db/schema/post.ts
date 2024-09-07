@@ -16,11 +16,12 @@ import { relations } from "drizzle-orm";
 export const postType = pgEnum("post_type", ["Room", "Business", "Event"]);
 
 export const posts = pgTable(
-  "posts",
+  "post",
   {
     id: uuid("id").primaryKey().defaultRandom().notNull(),
     name: text("name").notNull(),
     description: text("description"),
+    imageUrl: text("imageUrl"),
     type: postType("type").notNull(),
     radius: integer("radius").notNull(),
     location: geometry("location", {
@@ -47,12 +48,12 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   user: one(users, { fields: [posts.userId], references: [users.id] }),
   connections: many(connections),
   ratings: many(ratings),
-  // businessHours: many(businessHours),
-  // openTime: one(openTimes),
+  businessHours: many(businessHours),
+  openTime: one(openTimes),
 }));
 
 export const connections = pgTable(
-  "connections",
+  "connection",
   {
     userId: uuid("user_id")
       .references(() => users.id)
@@ -76,7 +77,7 @@ export const connectionsRelations = relations(connections, ({ one }) => ({
 }));
 
 export const ratings = pgTable(
-  "ratings",
+  "rating",
   {
     id: uuid("id").primaryKey().defaultRandom().notNull(),
     rating: integer("rating").$type<1 | 2 | 3 | 4 | 5>().notNull(),
@@ -110,7 +111,7 @@ export const days = pgEnum("days", [
 ]);
 
 export const businessHours = pgTable(
-  "business_hours",
+  "business_hour",
   {
     postId: uuid("post_id")
       .references(() => posts.id)
@@ -135,7 +136,7 @@ export const businessHoursRelations = relations(businessHours, ({ one }) => ({
 }));
 
 export const openTimes = pgTable(
-  "open_times",
+  "open_time",
   {
     postId: uuid("post_id")
       .references(() => posts.id)
